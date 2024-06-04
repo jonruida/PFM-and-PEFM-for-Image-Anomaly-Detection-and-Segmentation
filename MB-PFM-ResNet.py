@@ -481,36 +481,45 @@ if __name__ == "__main__":
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     # device = 'cpu'
 
-    from dataset.mvtec import MVTecDataset, MVTec_CLASS_NAMES
+    # Importa las clases y funciones necesarias
+    # Importa la clase CustomDataset que definiste previamente
+    from dataset.custom_dataset import CustomDataset,CUSTOM_CLASS_NAMES
     from torch.utils.data import DataLoader
     from torchvision import transforms as T
     from PIL import Image
 
+    # Define la transformación para el dataset
     if args.data_trans == 'navie':
         trans_x = T.Compose([T.Resize(args.resize, Image.ANTIALIAS),
-                             T.ToTensor()])
+                            T.ToTensor()])
     else:
         trans_x = T.Compose([T.Resize(args.resize, Image.ANTIALIAS),
-                             T.ToTensor(),
-                             T.Normalize(mean=[0.485, 0.456, 0.406],
-                                         std=[0.229, 0.224, 0.225])])
+                            T.ToTensor(),
+                            T.Normalize(mean=[0.485, 0.456, 0.406],
+                                        std=[0.229, 0.224, 0.225])])
 
+    # Inicializa listas para almacenar los resultados
     image_aucs = []
     pixel_aucs = []
     pro_30s = []
     times = []
-    # plt.figure(figsize=(10, 8))
-    for class_name in MVTec_CLASS_NAMES:
+
+    # Itera sobre los nombres de las clases personalizadas en lugar de MVTec_CLASS_NAMES
+    for class_name in CUSTOM_CLASS_NAMES:
         torch.cuda.empty_cache()
-        trainset = MVTecDataset(root_path=args.data_root, is_train=True, class_name=class_name, resize=args.resize,
+
+        # Crea el dataset y el dataloader para entrenamiento
+        trainset = CustomDataset(root_path=args.data_root, is_train=True, class_name=class_name, resize=args.resize,
                                 trans=trans_x)
         trainloader = DataLoader(trainset, batch_size=args.batch_size, shuffle=True, pin_memory=True,
-                                 num_workers=4)
+                                num_workers=4)
 
-        testset = MVTecDataset(root_path=args.data_root, is_train=False, class_name=class_name, resize=args.resize,
-                               trans=trans_x)
+        # Crea el dataset y el dataloader para pruebas
+        testset = CustomDataset(root_path=args.data_root, is_train=False, class_name=class_name, resize=args.resize,
+                              trans=trans_x)
         testloader = DataLoader(testset, batch_size=args.batch_size, shuffle=False, pin_memory=True, num_workers=4)
 
+# Continúa con el resto de tu código que utiliza trainloader y testloader
         model = DFP_AD(agent_S=args.agent_S, agent_T=args.agent_T)
         model.register(class_name=class_name, trainloader=trainloader, testloader=testloader, loss_type=args.loss_type,
                        data_trans=args.data_trans, size=args.resize, device=device,
